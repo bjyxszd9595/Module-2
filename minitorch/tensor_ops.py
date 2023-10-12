@@ -6,17 +6,11 @@ import numpy as np
 from typing_extensions import Protocol
 
 from . import operators
-from .tensor_data import (
-    MAX_DIMS,
-    broadcast_index,
-    index_to_position,
-    shape_broadcast,
-    to_index,
-)
+from .tensor_data import broadcast_index, index_to_position, shape_broadcast, to_index
 
 if TYPE_CHECKING:
     from .tensor import Tensor
-    from .tensor_data import Index, Shape, Storage, Strides
+    from .tensor_data import Shape, Storage, Strides
 
 
 class MapProto(Protocol):
@@ -269,7 +263,21 @@ def tensor_map(fn: Callable[[float], float]) -> Any:
         in_strides: Strides,
     ) -> None:
         # TODO: Implement for Task 2.3.
-        raise NotImplementedError("Need to implement for Task 2.3")
+        out_index = np.array(out_shape)
+        in_index = np.array(in_shape)
+
+        for i in range(len(out)):
+            # Convert ordinal i to an index in the out_shape
+            to_index(i, out_shape, out_index)
+            # Map the out_index to in_index taking broadcasting into account
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            # Convert multidimensional indices to positions
+            in_pos = index_to_position(in_index, in_strides)
+            # find the corresponding data @ in
+            data = in_storage[in_pos]
+            # Apply the function
+            mapped_data = fn(data)
+            out[index_to_position(out_index, out_strides)] = mapped_data
 
     return _map
 
@@ -319,7 +327,30 @@ def tensor_zip(fn: Callable[[float, float], float]) -> Any:
         b_strides: Strides,
     ) -> None:
         # TODO: Implement for Task 2.3.
-        raise NotImplementedError("Need to implement for Task 2.3")
+        a_shape_extended = [1] * (len(out_shape) - len(a_shape)) + list(a_shape)
+        a_strides_extended = [0] * (len(out_strides) - len(a_strides)) + list(a_strides)
+
+        b_shape_extended = [1] * (len(out_shape) - len(b_shape)) + list(b_shape)
+        b_strides_extended = [0] * (len(out_strides) - len(b_strides)) + list(b_strides)
+
+        out_index = [0 for _ in out_shape]
+        a_index = [0 for _ in a_shape_extended]
+        b_index = [0 for _ in b_shape_extended]
+
+        for i in range(len(out)):
+            # Convert ordinal i to an index in the out_shape
+            to_index(i, out_shape, out_index)
+
+            # Map the out_index to a_index and b_index taking broadcasting into account
+            broadcast_index(out_index, out_shape, a_shape_extended, a_index)
+            broadcast_index(out_index, out_shape, b_shape_extended, b_index)
+
+            # Convert multidimensional indices to positions
+            a_pos = index_to_position(a_index, a_strides_extended)
+            b_pos = index_to_position(b_index, b_strides_extended)
+
+            # Apply function
+            out[i] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return _zip
 
@@ -355,7 +386,15 @@ def tensor_reduce(fn: Callable[[float, float], float]) -> Any:
         reduce_dim: int,
     ) -> None:
         # TODO: Implement for Task 2.3.
-        raise NotImplementedError("Need to implement for Task 2.3")
+        out_index = np.array(out_shape)
+        for i in range(len(out)):
+            to_index(i, out_shape, out_index)
+            o_index = index_to_position(out_index, out_strides)
+            for j in range(a_shape[reduce_dim]):
+                a_index = out_index.copy()
+                a_index[reduce_dim] = j
+                pos_a = index_to_position(a_index, a_strides)
+                out[o_index] = fn(a_storage[pos_a], out[o_index])
 
     return _reduce
 

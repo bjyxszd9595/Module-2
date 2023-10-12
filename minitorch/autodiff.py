@@ -22,7 +22,17 @@ def central_difference(f: Any, *vals: Any, arg: int = 0, epsilon: float = 1e-6) 
     Returns:
         An approximation of $f'_i(x_0, \ldots, x_{n-1})$
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # TODO: Implement for Task 1.1.
+    # TODO: Implement for Task 1.1.
+    vals_plus = list(vals)
+    vals_minus = list(vals)
+
+    vals_plus[arg] += epsilon
+    vals_minus[arg] -= epsilon
+
+    central_diff = (f(*vals_plus) - f(*vals_minus)) / (2 * epsilon)
+
+    return central_diff
 
 
 variable_count = 1
@@ -60,7 +70,26 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     Returns:
         Non-constant Variables in topological order starting from the right.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # TODO: Implement for Task 1.4.
+    # # Set to keep track of visited nodes
+    visited_list = set()
+    topo_order: List[Variable] = []
+
+    def dfs(visit: Variable) -> None:
+        # skip the variable if it has been visited is a constant
+        if visit.unique_id in visited_list or visit.is_constant():
+            return
+            # if variable has children -> visit and run dfs on every parent
+        if not visit.is_leaf():
+            for parent in visit.parents:
+                if not parent.is_constant():
+                    dfs(parent)
+
+        visited_list.add(visit.unique_id)
+        topo_order.insert(0, visit)
+
+    dfs(variable)
+    return topo_order
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -74,7 +103,20 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # TODO: Implement for Task 1.4.
+    topo_sort_order = topological_sort(variable)
+    derivative_list = {}
+    derivative_list[variable.unique_id] = deriv
+    for v in topo_sort_order:
+        derivative = derivative_list[v.unique_id]
+        if v.is_leaf():
+            v.accumulate_derivative(derivative)
+        else:
+            for var, der in v.chain_rule(derivative):
+                if v.is_constant():
+                    continue
+                derivative_list.setdefault(var.unique_id, 0.0)
+                derivative_list[var.unique_id] = derivative_list[var.unique_id] + der
 
 
 @dataclass
